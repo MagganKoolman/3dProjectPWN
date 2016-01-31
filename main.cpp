@@ -1,9 +1,10 @@
 //--------------------------------------------------------------------------------------
 // BTH - Stefan Petersson 2014.
 //--------------------------------------------------------------------------------------
-#include <windows.h>
+#include "Player.h"
 
 #include <windows.h>
+
 
 #include <string>
 #include <fstream>
@@ -15,7 +16,6 @@
 #include "glm\glm.hpp" 
 #include "glm\gtx\transform.hpp"
 #include "glm\gtc\matrix_transform.hpp"
-#include "bth_image.h"
 
 #include <gl/glew.h>
 #include <gl/GL.h>
@@ -43,6 +43,8 @@ int dir = 1;
 float speed = 5;
 
 float rot = 0.0;
+
+Player player;
 
 #define BUFFER_OFFSET(i) ((char *)nullptr + (i))
 
@@ -234,7 +236,11 @@ void SetViewport()
 
 void Render()
 {
-	Cam = lookAt(vec3(speed*sinf(rot),1.5f,speed*cosf(rot)), vec3(0,0,0), vec3(0,1,0));
+	vec3 pos = player.getPosition();
+	Cam = lookAt(pos, pos+player.getForward(), vec3(0,1,0));
+
+
+	//Cam = lookAt(vec3(speed*sinf(rot),1.5f,speed*cosf(rot)), vec3(0,0,0), vec3(0,1,0));
 	rot += dir*0.05f;
 	Persp = perspective(45.0f, 1080.f/720.0f, 0.5f, 50.0f);
 	GLuint camMatrix = glGetUniformLocation(gShaderProgram, "Camera");
@@ -260,16 +266,8 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 
 	if (wndHandle)
 	{
-		INPUT_RECORD InRec;
-		COORD keyWhere;
-		COORD endWhere;
-		DWORD NumRead;
-		keyWhere.X = 15;
-		keyWhere.Y = 0;
-		endWhere.X = 0;
-		endWhere.Y = 3;
 
-
+		player = Player();
 
 		HDC hDC = GetDC(wndHandle);
 		HGLRC hRC = CreateOpenGLContext(wndHandle); //2. Skapa och koppla OpenGL context
@@ -288,7 +286,6 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 
 		ShowWindow(wndHandle, nCmdShow);
 		
-		
 		while (WM_QUIT != msg.message)
 		{
 			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -298,19 +295,8 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 			}
 			else
 			{
+				player.update(0.08f);
 				
-				if (GetAsyncKeyState('A')) {
-					dir = -1;
-				}
-				if (GetAsyncKeyState('D')) {
-					dir = 1;
-				}
-				if (GetAsyncKeyState('W')) {
-					speed -= 0.1;
-				}
-				if (GetAsyncKeyState('S')) {
-					speed += 0.1;
-				}
 				Render(); //9. Rendera
 
 				SwapBuffers(hDC); //10. Växla front- och back-buffer
