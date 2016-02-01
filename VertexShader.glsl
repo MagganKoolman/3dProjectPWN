@@ -11,6 +11,6 @@ uniform mat4 Perspective;
 void main()
 {
 	texOut = vertex_tex;
-	gl_Position = Perspective * Camera * vec4(vertex_position/5, 1.0);
+	gl_Position = Perspective * Camera * vec4(vertex_position, 1.0);
 }
 

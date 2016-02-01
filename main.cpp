@@ -4,7 +4,7 @@
 #include "Player.h"
 
 #include <windows.h>
-
+#include <chrono>
 
 #include <string>
 #include <fstream>
@@ -72,7 +72,7 @@ vector<tex> textureCoords;
 vector<face> faces;
 void loadObj() {
 	string input;
-	ifstream objFile("mesh.obj");
+	ifstream objFile("obj.obj");
 	istringstream inputString;
 	string line, special;
 	char* specialChar = new char[5];
@@ -138,26 +138,6 @@ void CreateShaders()
 		glGetShaderInfoLog(fs, infoLength, nullptr, &infoLog[0]);
 		throw std::runtime_error(infoLog);
 	}
-
-	//create geometry shade
-	/*GLuint gs = glCreateShader(GL_GEOMETRY_SHADER);
-	shaderFile.open("Geometry.glsl");
-	shaderText.assign((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
-	shaderFile.close();
-	shaderTextPtr = shaderText.c_str();
-	glShaderSource(gs, 1, &shaderTextPtr, nullptr);
-	glCompileShader(gs);
-	
-	glGetShaderiv(gs, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		GLint infoLength;
-		glGetShaderiv(gs, GL_INFO_LOG_LENGTH, &infoLength);
-		std::string infoLog;
-		infoLog.resize(infoLength);
-		glGetShaderInfoLog(gs, infoLength, nullptr, &infoLog[0]);
-		throw std::runtime_error(infoLog);
-	}*/
 
 	//link shader program (connect vs and ps)
 	gShaderProgram = glCreateProgram();
@@ -239,10 +219,8 @@ void Render()
 	vec3 pos = player.getPosition();
 	Cam = lookAt(pos, pos+player.getForward(), vec3(0,1,0));
 
-
-	//Cam = lookAt(vec3(speed*sinf(rot),1.5f,speed*cosf(rot)), vec3(0,0,0), vec3(0,1,0));
 	rot += dir*0.05f;
-	Persp = perspective(45.0f, 1080.f/720.0f, 0.5f, 50.0f);
+	Persp = perspective(45.0f, 1080.f/720.0f, 0.5f, 150.0f);
 	GLuint camMatrix = glGetUniformLocation(gShaderProgram, "Camera");
 	GLuint perspMatrix = glGetUniformLocation(gShaderProgram, "Perspective");
 
@@ -262,11 +240,8 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 	MSG msg = { 0 };
 	HWND wndHandle = InitWindow(hInstance); //1. Skapa fönster
 
-
-
 	if (wndHandle)
 	{
-
 		player = Player();
 
 		HDC hDC = GetDC(wndHandle);
@@ -283,23 +258,28 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 
 		CreateTriangleData(); //6. Definiera triangelvertiser, 7. Skapa vertex buffer object (VBO), 8.Skapa vertex array object (VAO)
 		
-
 		ShowWindow(wndHandle, nCmdShow);
-		
-		while (WM_QUIT != msg.message)
+		ShowCursor(false);
+		bool running = true;
+
+		chrono::milliseconds ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
+		long long dt = ms.count();
+		while (WM_QUIT != msg.message && running)
 		{
 			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 			{
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 			}
-			else
+			else if(GetActiveWindow() == wndHandle)
 			{
-				player.update(0.08f);
-				
+				chrono::milliseconds temp = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
+				dt = temp.count() - ms.count();
+				running = !GetAsyncKeyState(VK_ESCAPE);
+				player.update(((float)dt)/100, wndHandle);
 				Render(); //9. Rendera
-
 				SwapBuffers(hDC); //10. Växla front- och back-buffer
+				ms = temp;
 			}
 		}
 
@@ -308,7 +288,6 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 		wglDeleteContext(hRC);
 		DestroyWindow(wndHandle);
 	}
-
 	return (int) msg.wParam;
 }
 

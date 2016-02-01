@@ -19,7 +19,7 @@ class Player {
 	public:
 		Player();
 		~Player();
-		void update(float dt);
+		void update(float dt, const HWND &hDC);
 		glm::vec3 getForward();
 		glm::vec3 getPosition();
 };

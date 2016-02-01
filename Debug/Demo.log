@@ -1,9 +1,24 @@
-﻿Build started 2016-01-31 15:14:21.
-     1>Project "\\storage10.student.bth.se\students\20142\empd14\02-OpenGLo\02-OpenGL\Demo.vcxproj" on node 2 (Build target(s)).
-     1>Link:
-         Demo.vcxproj -> \\storage10.student.bth.se\students\20142\empd14\02-OpenGLo\02-OpenGL\Debug\Demo.exe
-     1>Done Building Project "\\storage10.student.bth.se\students\20142\empd14\02-OpenGLo\02-OpenGL\Demo.vcxproj" (Build target(s)).
+﻿Build started 2016-02-01 16:48:13.
+     1>Project "J:\Visual Studio 2015\Projects\3dProjectPWN\Demo.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt Player.cpp main.cpp
+         main.cpp
+     1>j:\visual studio 2015\projects\3dprojectpwn\main.cpp(100): warning C4477: 'sscanf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'char **'
+     1>j:\visual studio 2015\projects\3dprojectpwn\main.cpp(100): warning C4996: 'sscanf': This function or variable may be unsafe. Consider using sscanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+         c:\program files (x86)\windows kits\10\include\10.0.10150.0\ucrt\stdio.h(2254): note: see declaration of 'sscanf'
+     1>j:\visual studio 2015\projects\3dprojectpwn\main.cpp(80): warning C4101: 'n': unreferenced local variable
+     1>j:\visual studio 2015\projects\3dprojectpwn\main.cpp(214): warning C4244: 'argument': conversion from 'float' to 'GLint', possible loss of data
+         GLM: perspective function taking degrees as a parameter is deprecated. #define GLM_FORCE_RADIANS before including GLM headers to remove this message.
+         Player.cpp
+     1>j:\visual studio 2015\projects\3dprojectpwn\player.cpp(36): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
+     1>j:\visual studio 2015\projects\3dprojectpwn\player.cpp(37): warning C4244: 'initializing': conversion from 'LONG' to 'float', possible loss of data
+         Generating Code...
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"J:\Visual Studio 2015\Projects\3dProjectPWN\Debug\Demo.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"J:\Visual Studio 2015\Projects\3dProjectPWN\Debug\Demo.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"J:\Visual Studio 2015\Projects\3dProjectPWN\Debug\Demo.lib" /MACHINE:X86 Debug\main.obj
+         Debug\Player.obj
+         Demo.vcxproj -> J:\Visual Studio 2015\Projects\3dProjectPWN\Debug\Demo.exe
+     1>Done Building Project "J:\Visual Studio 2015\Projects\3dProjectPWN\Demo.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:00.65
+Time Elapsed 00:00:04.44
