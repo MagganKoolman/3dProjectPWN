@@ -1,7 +1,10 @@
 //--------------------------------------------------------------------------------------
 // BTH - Stefan Petersson 2014.
 //--------------------------------------------------------------------------------------
+#define GLM_FORCE_RADIANS
 #include "Player.h"
+#include "Object.h"
+#include "datatypes.h"
 
 #include <windows.h>
 #include <chrono>
@@ -44,6 +47,8 @@ float speed = 5;
 
 float rot = 0.0;
 
+uint nrOfFaces = 0;
+
 Player player;
 
 #define BUFFER_OFFSET(i) ((char *)nullptr + (i))
@@ -54,25 +59,16 @@ int loadshader(char* filename, char** ShaderSource, unsigned long& len);
 // This function RELEASES THE MEMORY ALLOCATED
 void unloadshader(GLubyte** ShaderSource);
 
-struct vtx {
-	float x, y, z;
-};
-struct nvtx {
-	float x, y, z;
-};
-struct tex {
-	float u, v;
-};
-struct face {
-	int v[3], n[3], t[3];
-};
+
 vector<vtx> vertices;
 vector<nvtx> normalVertices;
 vector<tex> textureCoords;
-vector<face> faces;
+//vector<face> faces;
+vector<Object*> objects;
+
 void loadObj() {
 	string input;
-	ifstream objFile("obj.obj");
+	ifstream objFile("mesh.obj");
 	istringstream inputString;
 	string line, special;
 	char* specialChar = new char[5];
@@ -80,6 +76,8 @@ void loadObj() {
 	nvtx n;
 	tex t;
 	face f;
+	Object* o = new Object();
+
 	while (getline(objFile, input)) {
 		inputString.clear();
 		inputString.str(input);
@@ -98,8 +96,20 @@ void loadObj() {
 		}
 		else if (line == "f ") {
 			sscanf(input.c_str(), "%s %i/%i/%i %i/%i/%i %i/%i/%i", &specialChar, &f.v[0], &f.t[0], &f.n[0], &f.v[1], &f.t[1], &f.n[1], &f.v[2], &f.t[2], &f.n[2]);
-			faces.push_back(f);
+			o->addFace(f);
+			nrOfFaces++;
 		}
+		else if (line == "us") {
+			if (!o->isEmpty()) {
+				objects.push_back(o);
+				o = new Object();
+			}
+			//fix texture
+
+		}
+	}
+	if (!o->isEmpty()) {
+		objects.push_back(o);
 	}
 	objFile.close();
 }
@@ -167,15 +177,18 @@ void CreateTriangleData()
 		float x, y, z, r, g, b;
 	};
 	
-	TriangleVertex *triangleVertices = new TriangleVertex[faces.size()*3];
+	TriangleVertex *triangleVertices = new TriangleVertex[nrOfFaces*3];
 
 	int vIndex;
 	int tIndex;
-	for (uint i = 0; i < faces.size(); i++) {
-		for (int j = 0; j < 3; j++) {
-			vIndex = faces[i].v[j]-1;
-			tIndex = faces[i].t[j]-1;
-			triangleVertices[3 * i + j] = {vertices[vIndex].x, vertices[vIndex].y, vertices[vIndex].z, /*temporärt --->>*/ textureCoords[tIndex].u, textureCoords[tIndex].v, 0.3f };
+	int verticeIndex = 0;
+	for (uint o = 0; o < objects.size(); o+=2) {
+		for (uint i = 0; i < objects[o]->faces.size(); i++) {
+			for (int j = 0; j < 3; j++) {
+				vIndex = objects[o]->faces[i].v[j] - 1;
+				tIndex = objects[o]->faces[i].t[j] - 1;
+				triangleVertices[verticeIndex++] = { vertices[vIndex].x, vertices[vIndex].y, vertices[vIndex].z, /*temporärt --->>*/ textureCoords[tIndex].u, textureCoords[tIndex].v, 0.3f };
+			}
 		}
 	}
 	// Vertex Array Object (VAO)
@@ -193,7 +206,7 @@ void CreateTriangleData()
 	glBindBuffer(GL_ARRAY_BUFFER, gVertexBuffer);
 	// This "could" imply copying to the GPU, depending on what the driver wants to do...
 	
-	glBufferData(GL_ARRAY_BUFFER, faces.size()*3*sizeof(float)*6, triangleVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, nrOfFaces*3*sizeof(TriangleVertex), triangleVertices, GL_STATIC_DRAW);
 	
 	// query where which slot corresponds to the input vertex_position in the Vertex Shader 
 	GLuint vertexPos = glGetAttribLocation(gShaderProgram, "vertex_position");
@@ -211,7 +224,7 @@ void CreateTriangleData()
 
 void SetViewport()
 {
-	glViewport(0.f, 0.f, 1080, 720);
+	glViewport(0, 0, 1080, 720);
 }
 
 void Render()
@@ -219,7 +232,6 @@ void Render()
 	vec3 pos = player.getPosition();
 	Cam = lookAt(pos, pos+player.getForward(), vec3(0,1,0));
 
-	rot += dir*0.05f;
 	Persp = perspective(45.0f, 1080.f/720.0f, 0.5f, 150.0f);
 	GLuint camMatrix = glGetUniformLocation(gShaderProgram, "Camera");
 	GLuint perspMatrix = glGetUniformLocation(gShaderProgram, "Perspective");
@@ -231,7 +243,7 @@ void Render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	glUseProgram(gShaderProgram);
 	glBindVertexArray(gVertexAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, faces.size()*3);
+	glDrawArrays(GL_TRIANGLES, 0, nrOfFaces*3);
 }
 
 int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow )
@@ -282,7 +294,9 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 				ms = temp;
 			}
 		}
-
+		for (uint i = 0; i < objects.size(); i++) {
+			delete objects[i];
+		}
 		wglMakeCurrent(NULL, NULL);
 		ReleaseDC(wndHandle, hDC);
 		wglDeleteContext(hRC);

@@ -81,15 +81,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\temp\temp\Object.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Player.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fragment.glsl" />
-    <None Include="Geometry.glsl" />
     <None Include="VertexShader.glsl" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\temp\temp\datatypes.h" />
+    <ClInclude Include="..\..\temp\temp\Object.h" />
     <ClInclude Include="bth_image.h" />
     <ClInclude Include="Player.h" />
   </ItemGroup>
