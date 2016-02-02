@@ -42,11 +42,6 @@ mat4 M;
 mat4 Cam;
 mat4 Persp;
 
-int dir = 1;
-float speed = 5;
-
-float rot = 0.0;
-
 uint nrOfFaces = 0;
 
 Player player;
@@ -182,7 +177,7 @@ void CreateTriangleData()
 	int vIndex;
 	int tIndex;
 	int verticeIndex = 0;
-	for (uint o = 0; o < objects.size(); o+=2) {
+	for (uint o = 0; o < objects.size(); o++) {
 		for (uint i = 0; i < objects[o]->faces.size(); i++) {
 			for (int j = 0; j < 3; j++) {
 				vIndex = objects[o]->faces[i].v[j] - 1;
