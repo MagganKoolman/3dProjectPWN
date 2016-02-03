@@ -1,9 +1,8 @@
-#version 400
+#version 430
 layout(location = 0) in vec3 vertex_position;
-layout(location = 1) in vec3 vertex_tex;
+layout(location = 1) in vec2 vertex_tex;
 
-out vec3 texOut;
-out vec4 position;
+out vec2 texOut;
 
 uniform mat4 Camera;
 uniform mat4 Perspective;

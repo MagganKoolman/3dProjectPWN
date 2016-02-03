@@ -1,10 +1,13 @@
-#version 400
+#version 430
 
 out vec3 fragment_color;
 
-in vec3 texOut;
+in vec2 texOut;
+
+uniform sampler2D texSampler;
 
 void main () 
 {
-	fragment_color = texOut;
+	vec4 mySample = texture(texSampler, vec2(texOut.s, 1- texOut.t));
+	fragment_color = mySample.rgb;
 }

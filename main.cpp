@@ -5,6 +5,8 @@
 #include "Player.h"
 #include "Object.h"
 #include "datatypes.h"
+#include "Simple OpenGL Image Library\src\SOIL.h"
+
 
 #include <windows.h>
 #include <chrono>
@@ -36,7 +38,7 @@ HGLRC CreateOpenGLContext(HWND wndHandle);
 GLuint gVertexBuffer = 0;
 GLuint gVertexAttribute = 0;
 GLuint gShaderProgram = 0;
-GLuint bth_tex = 0;
+GLuint texture = 0;
 
 mat4 M;
 mat4 Cam;
@@ -108,6 +110,76 @@ void loadObj() {
 	}
 	objFile.close();
 }
+
+void CreateTexture()
+{
+	// Load textures
+	
+	glGenTextures(1, &texture);
+
+	int width, height;
+	unsigned char* image;
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	image = SOIL_load_image("body_1024.png", &width, &height, 0, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	//glUniform1i(glGetUniformLocation(shaderProgram, "texKitten"), 0);
+}
+
+GLuint raw_texture_load(const char *filename, int width, int height)
+{
+	GLuint texture;
+	unsigned char *data;
+	FILE *file;
+
+	// open texture data
+	file = fopen(filename, "rb");
+	if (file == NULL) return 0;
+
+	// allocate buffer
+	data = (unsigned char*)malloc(width * height * 3);
+
+	// read texture data
+	fread(data, width * height * 3, 1, file);
+	fclose(file);
+
+	// allocate a texture name
+	glGenTextures(1, &texture);
+	
+	// select our current texture
+	glActiveTexture(GL_TEXTURE0);
+
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	// select modulate to mix texture with color for shading
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_DECAL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_DECAL);
+
+	// when texture area is small, bilinear filter the closest mipmap
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+	// when texture area is large, bilinear filter the first mipmap
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// texture should tile
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	// free buffer
+	free(data);
+	return texture;
+}
+
 void CreateShaders()
 {
 	//create vertex shader
@@ -143,7 +215,7 @@ void CreateShaders()
 		glGetShaderInfoLog(fs, infoLength, nullptr, &infoLog[0]);
 		throw std::runtime_error(infoLog);
 	}
-
+	
 	//link shader program (connect vs and ps)
 	gShaderProgram = glCreateProgram();
 	glAttachShader(gShaderProgram, fs);
@@ -169,7 +241,7 @@ void CreateTriangleData()
 
 	struct TriangleVertex
 	{
-		float x, y, z, r, g, b;
+		float x, y, z, u, v;
 	};
 	
 	TriangleVertex *triangleVertices = new TriangleVertex[nrOfFaces*3];
@@ -182,7 +254,7 @@ void CreateTriangleData()
 			for (int j = 0; j < 3; j++) {
 				vIndex = objects[o]->faces[i].v[j] - 1;
 				tIndex = objects[o]->faces[i].t[j] - 1;
-				triangleVertices[verticeIndex++] = { vertices[vIndex].x, vertices[vIndex].y, vertices[vIndex].z, /*temporärt --->>*/ textureCoords[tIndex].u, textureCoords[tIndex].v, 0.3f };
+				triangleVertices[verticeIndex++] = { vertices[vIndex].x, vertices[vIndex].y, vertices[vIndex].z, /*temporärt --->>*/ textureCoords[tIndex].u, textureCoords[tIndex].v };
 			}
 		}
 	}
@@ -213,7 +285,7 @@ void CreateTriangleData()
 	GLuint vertexColor = glGetAttribLocation(gShaderProgram, "vertex_tex");
 	// specify that: the vertex attribute "vertex_color", of 3 elements of type FLOAT, not normalized, with STRIDE != 0,
 	//               starts at offset (12 bytes) of the gVertexBuffer 
-	glVertexAttribPointer(vertexColor, 3,    GL_FLOAT, GL_FALSE,     sizeof(TriangleVertex), BUFFER_OFFSET(sizeof(float)*3));
+	glVertexAttribPointer(vertexColor, 2,    GL_FLOAT, GL_FALSE,     sizeof(TriangleVertex), BUFFER_OFFSET(sizeof(float)*3));
 	delete[] triangleVertices;
 }
 
@@ -250,7 +322,7 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 	if (wndHandle)
 	{
 		player = Player();
-
+		
 		HDC hDC = GetDC(wndHandle);
 		HGLRC hRC = CreateOpenGLContext(wndHandle); //2. Skapa och koppla OpenGL context
 
@@ -262,13 +334,12 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 		SetViewport(); //4. Sätt viewport
 
 		CreateShaders(); //5. Skapa vertex- och fragment-shaders
-
 		CreateTriangleData(); //6. Definiera triangelvertiser, 7. Skapa vertex buffer object (VBO), 8.Skapa vertex array object (VAO)
 		
 		ShowWindow(wndHandle, nCmdShow);
 		ShowCursor(false);
 		bool running = true;
-
+		CreateTexture();
 		chrono::milliseconds ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
 		long long dt = ms.count();
 		while (WM_QUIT != msg.message && running)
