@@ -9,6 +9,7 @@ class Object {
 	public:
 		std::vector<face> faces;
 		GLuint texture;
+		material* mat;
 	public:
 		Object();
 		void setTexture(GLuint text);

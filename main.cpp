@@ -64,17 +64,17 @@ vector<tex> textureCoords;
 vector<material> allMaterials;
 vector<Object*> objects;
 
-void CreateTexture(string fileName)
+GLuint CreateTexture(string fileName)
 {
 	// Load textures
-
-	glGenTextures(1, &texture);
+	GLuint texIndex;
+	glGenTextures(1, &texIndex);
 
 	int width, height;
 	unsigned char* image;
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, texIndex);
 	image = SOIL_load_image(fileName.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	SOIL_free_image_data(image);
@@ -84,7 +84,8 @@ void CreateTexture(string fileName)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	//glUniform1i(glGetUniformLocation(shaderProgram, "texKitten"), 0);
+	glUniform1i(glGetUniformLocation(gShaderProgram, fileName.c_str()), texIndex);
+	return texIndex;	
 }
 
 void loadMaterials(string materials)
@@ -93,6 +94,7 @@ void loadMaterials(string materials)
 	istringstream inputString;
 	string line, special, input, name;
 	material mat;
+	bool first = true;
 	while (getline(matFile, input))
 	{
 		inputString.clear();
@@ -100,31 +102,35 @@ void loadMaterials(string materials)
 		line = input.substr(0, 2);
 		if (line == "ne")
 		{
-			inputString >> special >> name;
-			mat.materialName = name.substr(15, name.size());
-			for (int i = 0; i < 3; i++)			
-			{
-				getline(matFile, input);
-				inputString.clear();
-				inputString.str(input);
-				if (i == 0)
-				{
-					inputString >> special >> mat.Ka[0] >> mat.Ka[1] >> mat.Ka[2];
-				}
-				else if (i == 1)
-				{
-					inputString >> special >> mat.Kd[0] >> mat.Kd[1] >> mat.Kd[2];
-				}
-				else if (i == 2)
-				{
-					inputString >> special >> mat.Ks[0] >> mat.Ks[1] >> mat.Ks[2];
-				}
+			
+			if (!first) {
+				allMaterials.push_back(mat);
 			}
+			first = false;
+			for (int i = 0; i < 3; i++) {
+				mat.Ka[i] = 0;
+				mat.Ks[i] = 0;
+				mat.Kd[i] = 0;
+				mat.materialName = "";
+			}
+			inputString >> special >> name;
+			mat.materialName = name;
+		}
+		else if (line == "Ka")
+		{
+			inputString >> special >> mat.Ka[0] >> mat.Ka[1] >> mat.Ka[2];
+		}
+		else if (line == "Kd")
+		{
+			inputString >> special >> mat.Kd[0] >> mat.Kd[1] >> mat.Kd[2];
+		}
+		else if (line == "Ks")
+		{
+			inputString >> special >> mat.Ks[0] >> mat.Ks[1] >> mat.Ks[2];
 		}
 		
-		if (line != "ma" && line != "Ni")
-			allMaterials.push_back(mat);
 	}
+	allMaterials.push_back(mat);
 }
 
 void loadObj() {
@@ -145,6 +151,7 @@ void loadObj() {
 		inputString.clear();
 		inputString.str(input);
 		line = input.substr(0, 2);
+		
 		if (line == "v ") {
 			inputString >> special >> v.x >> v.y >> v.z;
 			vertices.push_back(v);
@@ -164,16 +171,22 @@ void loadObj() {
 		}
 		else if (line == "us"){
 			inputString >> special >> mat;
-			// namnet på materialet objektet ska ha ====> mat.substr(15, mat.size());
+			for (int i = 0; i < allMaterials.size(); i++) {
+				if (mat == allMaterials[i].materialName)
+					o->mat = &allMaterials[i];
+			}
+		
 			if (!o->isEmpty()) {
 				objects.push_back(o);
 				o = new Object();
 			}
 		}
-		else if (line == "mt"){
+		else if (line == "mt") {
 			inputString >> special >> mat;
 			loadMaterials(mat);
-		}			
+		}
+		
+				
 	
 	}
 	if (!o->isEmpty()) {
