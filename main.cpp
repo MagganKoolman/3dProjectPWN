@@ -61,21 +61,87 @@ vector<vtx> vertices;
 vector<nvtx> normalVertices;
 vector<tex> textureCoords;
 //vector<face> faces;
+vector<material> allMaterials;
 vector<Object*> objects;
+
+void CreateTexture(string fileName)
+{
+	// Load textures
+
+	glGenTextures(1, &texture);
+
+	int width, height;
+	unsigned char* image;
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	image = SOIL_load_image(fileName.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	//glUniform1i(glGetUniformLocation(shaderProgram, "texKitten"), 0);
+}
+
+void loadMaterials(string materials)
+{
+	ifstream matFile(materials);
+	istringstream inputString;
+	string line, special, input, name;
+	material mat;
+	while (getline(matFile, input))
+	{
+		inputString.clear();
+		inputString.str(input);
+		line = input.substr(0, 2);
+		if (line == "ne")
+		{
+			inputString >> special >> name;
+			mat.materialName = name.substr(15, name.size());
+			for (int i = 0; i < 3; i++)			
+			{
+				getline(matFile, input);
+				inputString.clear();
+				inputString.str(input);
+				if (i == 0)
+				{
+					inputString >> special >> mat.Ka[0] >> mat.Ka[1] >> mat.Ka[2];
+				}
+				else if (i == 1)
+				{
+					inputString >> special >> mat.Kd[0] >> mat.Kd[1] >> mat.Kd[2];
+				}
+				else if (i == 2)
+				{
+					inputString >> special >> mat.Ks[0] >> mat.Ks[1] >> mat.Ks[2];
+				}
+			}
+		}
+		
+		if (line != "ma" && line != "Ni")
+			allMaterials.push_back(mat);
+	}
+}
 
 void loadObj() {
 	string input;
 	ifstream objFile("mesh.obj");
 	istringstream inputString;
-	string line, special;
+	string line, special, mat;
 	char* specialChar = new char[5];
 	vtx v;
 	nvtx n;
 	tex t;
 	face f;
+	vector<string> materials;
 	Object* o = new Object();
 
-	while (getline(objFile, input)) {
+	while (getline(objFile, input))
+	{
 		inputString.clear();
 		inputString.str(input);
 		line = input.substr(0, 2);
@@ -96,88 +162,24 @@ void loadObj() {
 			o->addFace(f);
 			nrOfFaces++;
 		}
-		else if (line == "us") {
+		else if (line == "us"){
+			inputString >> special >> mat;
+			// namnet på materialet objektet ska ha ====> mat.substr(15, mat.size());
 			if (!o->isEmpty()) {
 				objects.push_back(o);
 				o = new Object();
 			}
-			//fix texture
-
 		}
+		else if (line == "mt"){
+			inputString >> special >> mat;
+			loadMaterials(mat);
+		}			
+	
 	}
 	if (!o->isEmpty()) {
 		objects.push_back(o);
 	}
 	objFile.close();
-}
-
-void CreateTexture()
-{
-	// Load textures
-	
-	glGenTextures(1, &texture);
-
-	int width, height;
-	unsigned char* image;
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	image = SOIL_load_image("body_1024.png", &width, &height, 0, SOIL_LOAD_RGB);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	SOIL_free_image_data(image);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	//glUniform1i(glGetUniformLocation(shaderProgram, "texKitten"), 0);
-}
-
-GLuint raw_texture_load(const char *filename, int width, int height)
-{
-	GLuint texture;
-	unsigned char *data;
-	FILE *file;
-
-	// open texture data
-	file = fopen(filename, "rb");
-	if (file == NULL) return 0;
-
-	// allocate buffer
-	data = (unsigned char*)malloc(width * height * 3);
-
-	// read texture data
-	fread(data, width * height * 3, 1, file);
-	fclose(file);
-
-	// allocate a texture name
-	glGenTextures(1, &texture);
-	
-	// select our current texture
-	glActiveTexture(GL_TEXTURE0);
-
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	// select modulate to mix texture with color for shading
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_DECAL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_DECAL);
-
-	// when texture area is small, bilinear filter the closest mipmap
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	// when texture area is large, bilinear filter the first mipmap
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	// texture should tile
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	// free buffer
-	free(data);
-	return texture;
 }
 
 void CreateShaders()
@@ -254,7 +256,7 @@ void CreateTriangleData()
 			for (int j = 0; j < 3; j++) {
 				vIndex = objects[o]->faces[i].v[j] - 1;
 				tIndex = objects[o]->faces[i].t[j] - 1;
-				triangleVertices[verticeIndex++] = { vertices[vIndex].x, vertices[vIndex].y, vertices[vIndex].z, /*temporärt --->>*/ textureCoords[tIndex].u, textureCoords[tIndex].v };
+				triangleVertices[verticeIndex++] = { vertices[vIndex].x, vertices[vIndex].y, vertices[vIndex].z, textureCoords[tIndex].u, textureCoords[tIndex].v };
 			}
 		}
 	}
@@ -339,7 +341,7 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 		ShowWindow(wndHandle, nCmdShow);
 		ShowCursor(false);
 		bool running = true;
-		CreateTexture();
+		CreateTexture("body_1024.png");
 		chrono::milliseconds ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
 		long long dt = ms.count();
 		while (WM_QUIT != msg.message && running)
