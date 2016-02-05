@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <chrono>
 
+#include <map>
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -22,7 +23,6 @@
 #include "glm\gtx\transform.hpp"
 #include "glm\gtc\matrix_transform.hpp"
 
-#include <gl/glew.h>
 #include <gl/GL.h>
 
 #pragma comment(lib, "opengl32.lib")
@@ -90,6 +90,7 @@ GLuint CreateTexture(string fileName)
 
 void loadMaterials(string materials)
 {
+	map<string, GLuint> texmapid;
 	ifstream matFile(materials);
 	istringstream inputString;
 	string line, special, input, name;
@@ -107,28 +108,33 @@ void loadMaterials(string materials)
 				allMaterials.push_back(mat);
 			}
 			first = false;
-			for (int i = 0; i < 3; i++) {
-				mat.Ka[i] = 0;
-				mat.Ks[i] = 0;
-				mat.Kd[i] = 0;
-				mat.materialName = "";
-			}
+
+			mat.materialName = "";
+			
 			inputString >> special >> name;
 			mat.materialName = name;
+			mat.texid = 0;
 		}
 		else if (line == "Ka")
 		{
-			inputString >> special >> mat.Ka[0] >> mat.Ka[1] >> mat.Ka[2];
+			inputString >> special >> mat.Ka.x >> mat.Ka.y >> mat.Ka.z;
 		}
 		else if (line == "Kd")
 		{
-			inputString >> special >> mat.Kd[0] >> mat.Kd[1] >> mat.Kd[2];
+			inputString >> special >> mat.Kd.x >> mat.Kd.y >> mat.Kd.z;
 		}
 		else if (line == "Ks")
 		{
-			inputString >> special >> mat.Ks[0] >> mat.Ks[1] >> mat.Ks[2];
+			inputString >> special >> mat.Ks.x >> mat.Ks.y >> mat.Ks.z;
 		}
-		
+		else if (line == "ma")
+		{
+			inputString >> special >> name;
+			if (!texmapid[name]) {
+				texmapid[name] = CreateTexture(name);
+			}
+			mat.texid = texmapid[name];
+		}
 	}
 	allMaterials.push_back(mat);
 }
@@ -138,7 +144,7 @@ void loadObj() {
 	ifstream objFile("mesh.obj");
 	istringstream inputString;
 	string line, special, mat;
-	char* specialChar = new char[5];
+	char* specialChar = (char*)malloc(5);
 	vtx v;
 	nvtx n;
 	tex t;
@@ -156,42 +162,41 @@ void loadObj() {
 			inputString >> special >> v.x >> v.y >> v.z;
 			vertices.push_back(v);
 		}
-		/*else if (line == "vn") {
+		else if (line == "vn") {
 			inputString >> special >> n.x >> n.y >> n.z;
 			normalVertices.push_back(n);
-		}*/
+		}
 		else if (line == "vt") {
 			inputString >> special >> t.u >> t.v;
 			textureCoords.push_back(t);
 		}
 		else if (line == "f ") {
-			sscanf(input.c_str(), "%s %i/%i/%i %i/%i/%i %i/%i/%i", &specialChar, &f.v[0], &f.t[0], &f.n[0], &f.v[1], &f.t[1], &f.n[1], &f.v[2], &f.t[2], &f.n[2]);
+			sscanf(input.c_str(), "%s %i/%i/%i %i/%i/%i %i/%i/%i", specialChar, &f.v[0], &f.t[0], &f.n[0], &f.v[1], &f.t[1], &f.n[1], &f.v[2], &f.t[2], &f.n[2]);
 			o->addFace(f);
 			nrOfFaces++;
 		}
 		else if (line == "us"){
 			inputString >> special >> mat;
-			for (int i = 0; i < allMaterials.size(); i++) {
-				if (mat == allMaterials[i].materialName)
-					o->mat = &allMaterials[i];
-			}
-		
+			
 			if (!o->isEmpty()) {
 				objects.push_back(o);
 				o = new Object();
 			}
+			for (int i = 0; i < allMaterials.size(); i++) {
+				if (mat == allMaterials[i].materialName)
+					o->mat = &allMaterials[i];
+			}
+
 		}
 		else if (line == "mt") {
 			inputString >> special >> mat;
 			loadMaterials(mat);
-		}
-		
-				
-	
+		}	
 	}
 	if (!o->isEmpty()) {
 		objects.push_back(o);
 	}
+	free(specialChar);
 	objFile.close();
 }
 
@@ -253,55 +258,54 @@ void CreateShaders()
 void CreateTriangleData()
 {
 	loadObj();
-
-	struct TriangleVertex
-	{
-		float x, y, z, u, v;
-	};
 	
-	TriangleVertex *triangleVertices = new TriangleVertex[nrOfFaces*3];
+	TriangleVertex *triangleVertices;
 
 	int vIndex;
 	int tIndex;
-	int verticeIndex = 0;
+	int nIndex;
 	for (uint o = 0; o < objects.size(); o++) {
+		triangleVertices = new TriangleVertex[objects[o]->faces.size()*3];
 		for (uint i = 0; i < objects[o]->faces.size(); i++) {
 			for (int j = 0; j < 3; j++) {
 				vIndex = objects[o]->faces[i].v[j] - 1;
 				tIndex = objects[o]->faces[i].t[j] - 1;
-				triangleVertices[verticeIndex++] = { vertices[vIndex].x, vertices[vIndex].y, vertices[vIndex].z, textureCoords[tIndex].u, textureCoords[tIndex].v };
+				nIndex = objects[o]->faces[i].n[j] - 1;
+				triangleVertices[(3 * i) + j] = { vertices[vIndex].x, vertices[vIndex].y, vertices[vIndex].z, textureCoords[tIndex].u, textureCoords[tIndex].v, 
+					normalVertices[nIndex].x, normalVertices[nIndex].y ,normalVertices[nIndex].z };
 			}
 		}
+		glGenVertexArrays(1, &gVertexAttribute);
+		objects[o]->VAOid = gVertexAttribute;
+		glBindVertexArray(objects[o]->VAOid);
+		glGenBuffers(1, &gVertexBuffer);
+		objects[o]->BUFFid = gVertexBuffer;
+		glBindBuffer(GL_ARRAY_BUFFER, objects[o]->BUFFid);
+		glBufferData(GL_ARRAY_BUFFER, objects[o]->faces.size() * 3 * sizeof(TriangleVertex), triangleVertices, GL_STATIC_DRAW);
+		
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+
+		// query where which slot corresponds to the input vertex_position in the Vertex Shader 
+		GLuint vertexPos = glGetAttribLocation(gShaderProgram, "vertex_position");
+		// specify that: the vertex attribute "vertexPos", of 3 elements of type FLOAT, not normalized, with STRIDE != 0,
+		//               starts at offset 0 of the gVertexBuffer (it is implicitly bound!)
+		glVertexAttribPointer(vertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(TriangleVertex), BUFFER_OFFSET(0));
+
+		// query where which slot corresponds to the input vertex_color in the Vertex Shader 
+		GLuint vertexColor = glGetAttribLocation(gShaderProgram, "vertex_tex");
+		// specify that: the vertex attribute "vertex_color", of 3 elements of type FLOAT, not normalized, with STRIDE != 0,
+		//               starts at offset (12 bytes) of the gVertexBuffer 
+		glVertexAttribPointer(vertexColor, 2, GL_FLOAT, GL_FALSE, sizeof(TriangleVertex), BUFFER_OFFSET(sizeof(float) * 3));
+
+		GLuint vertexNormal = glGetAttribLocation(gShaderProgram, "vertex_normal");
+		glVertexAttribPointer(vertexNormal, 3, GL_FLOAT, GL_FALSE, sizeof(TriangleVertex), BUFFER_OFFSET(sizeof(float) * 5));
+
+
+		delete[] triangleVertices;
 	}
-	// Vertex Array Object (VAO)
-	glGenVertexArrays(1, &gVertexAttribute);
 	
-	// bind == enable
-	glBindVertexArray(gVertexAttribute);
-	// this activates the first and second attributes of this VAO
-	glEnableVertexAttribArray(0); 
-	glEnableVertexAttribArray(1);
-
-	// create a vertex buffer object (VBO) id
-	glGenBuffers(1, &gVertexBuffer);
-	// Bind the buffer ID as an ARRAY_BUFFER
-	glBindBuffer(GL_ARRAY_BUFFER, gVertexBuffer);
-	// This "could" imply copying to the GPU, depending on what the driver wants to do...
-	
-	glBufferData(GL_ARRAY_BUFFER, nrOfFaces*3*sizeof(TriangleVertex), triangleVertices, GL_STATIC_DRAW);
-	
-	// query where which slot corresponds to the input vertex_position in the Vertex Shader 
-	GLuint vertexPos = glGetAttribLocation(gShaderProgram, "vertex_position");
-	// specify that: the vertex attribute "vertexPos", of 3 elements of type FLOAT, not normalized, with STRIDE != 0,
-	//               starts at offset 0 of the gVertexBuffer (it is implicitly bound!)
-	glVertexAttribPointer(vertexPos, 3,    GL_FLOAT, GL_FALSE,     sizeof(TriangleVertex), BUFFER_OFFSET(0));
-
-	// query where which slot corresponds to the input vertex_color in the Vertex Shader 
-	GLuint vertexColor = glGetAttribLocation(gShaderProgram, "vertex_tex");
-	// specify that: the vertex attribute "vertex_color", of 3 elements of type FLOAT, not normalized, with STRIDE != 0,
-	//               starts at offset (12 bytes) of the gVertexBuffer 
-	glVertexAttribPointer(vertexColor, 2,    GL_FLOAT, GL_FALSE,     sizeof(TriangleVertex), BUFFER_OFFSET(sizeof(float)*3));
-	delete[] triangleVertices;
 }
 
 void SetViewport()
@@ -313,19 +317,47 @@ void Render()
 {
 	vec3 pos = player.getPosition();
 	Cam = lookAt(pos, pos+player.getForward(), vec3(0,1,0));
-
 	Persp = perspective(45.0f, 1080.f/720.0f, 0.5f, 150.0f);
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+
+	GLuint ambientLight = glGetUniformLocation(gShaderProgram, "ambientLight");
+	GLuint diffuseLight = glGetUniformLocation(gShaderProgram, "diffuseLight");
+	GLuint specularLight = glGetUniformLocation(gShaderProgram, "specularLight");
+
 	GLuint camMatrix = glGetUniformLocation(gShaderProgram, "Camera");
 	GLuint perspMatrix = glGetUniformLocation(gShaderProgram, "Perspective");
+	
 
 	glUniformMatrix4fv(camMatrix, 1, GL_FALSE, &Cam[0][0]);
 	glUniformMatrix4fv(perspMatrix, 1, GL_FALSE, &Persp[0][0]);
 
-	glClearColor(0.1f, 0, 0.1f, 1);
+	glClearColor(0.2f, 0.2f, 0.2f, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	glUseProgram(gShaderProgram);
-	glBindVertexArray(gVertexAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, nrOfFaces*3);
+	for (uint i = 0; i < objects.size(); i++)
+	{
+		ambient = objects[i]->mat->Ka;
+		diffuse = objects[i]->mat->Kd;
+		specular = objects[i]->mat->Ks;
+
+		glUniform3fv(ambientLight, 1, &ambient[0]);
+		glUniform3fv(diffuseLight, 1, &diffuse[0]);
+		glUniform3fv(specularLight, 1, &specular[0]);
+
+		glBindVertexArray(objects[i]->VAOid);	
+		GLuint tempTexid = objects[i]->mat->texid;
+		
+		if (tempTexid == 0)
+		{
+			tempTexid = 5;
+		}
+		glBindTexture(GL_TEXTURE_2D, tempTexid);
+		glDrawArrays(GL_TRIANGLES, 0, objects[i]->faces.size() * 3);	
+		glBindVertexArray(0);
+	}
+	
 }
 
 int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow )
@@ -478,3 +510,165 @@ HGLRC CreateOpenGLContext(HWND wndHandle)
 
 	return hRC;
 }
+
+/*int GLGraphics::RenderInstanced(ICamera* _camera)
+{
+t+=0.001f;
+
+ModelRenderInfo* MRI;
+
+m_standardShaderProgram.UseProgram();
+glEnable(GL_DEPTH_TEST);
+
+m_standardShaderProgram.SetUniformV("EyePosition", vec4(_camera->GetPosition(), 1.0f));
+
+for(int i=0; i< m_models.size();i++)
+{
+MRI = m_models[i];
+int instances = m_models[i]->instances.size();
+
+glActiveTexture(GL_TEXTURE0);
+glBindTexture(GL_TEXTURE_2D, m_models[i]->texHandle);
+
+//Update matrix buffer//
+glBindBuffer(GL_ARRAY_BUFFER,m_models[i]->buffers[4]);
+glm::mat4* matrices = (glm::mat4*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+int j = 0;
+
+for (std::map < int, ModelInstance*>::const_iterator insIt = m_models[i]->instances.begin(); insIt != m_models[i]->instances.end(); ++insIt)
+{
+matrices[j] = *insIt->second->world;
+//PRINTMATRIX(&matrices[j]);
+j++;
+}
+glUnmapBuffer(GL_ARRAY_BUFFER);
+glBindBuffer(GL_ARRAY_BUFFER,0);
+//Update matrix buffer//
+
+//Update explosion buffer//
+
+glBindBuffer(GL_ARRAY_BUFFER,m_models[i]->buffers[2]);
+float* explosion = (float*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+
+j = 0;
+
+for (std::map < int, ModelInstance*>::const_iterator insIt = m_models[i]->instances.begin(); insIt != m_models[i]->instances.end(); ++insIt)
+{
+if(insIt->second->explosion)
+explosion[j] = *insIt->second->explosion;
+else
+explosion[j] = 0.0f;
+
+j++;
+}
+glUnmapBuffer(GL_ARRAY_BUFFER);
+glBindBuffer(GL_ARRAY_BUFFER,0);
+//Update explosion buffer<//
+
+glBindVertexArray(MRI->bufferVAOID);
+
+glDrawArraysInstanced(GL_TRIANGLES,0,MRI->vertices,instances);
+
+glBindVertexArray(0);
+
+}
+
+return 1;
+}
+void GLGraphics::AddObject(int id, std::string model, MATRIX4 _world, MATRIX4 worldInverseTranspose,float* explosion)
+{
+for(int i=0; i < m_models.size();i++)
+{
+if (m_models[0]->instances.count(_id) !=0)
+return;
+}
+
+int newModelID = -1;
+
+for(int i=0; i < m_models.size();i++)
+{
+if(m_models[i]->name == _model)
+{
+newModelID = i;
+int size = 0;
+
+//Resize instance buffers only
+glBindBuffer(GL_ARRAY_BUFFER, m_models[i]->buffers[2]);
+glGetBufferParameteriv(GL_ARRAY_BUFFER,GL_BUFFER_SIZE,&size);
+glBufferData(GL_ARRAY_BUFFER, size + sizeof(float), NULL, GL_DYNAMIC_DRAW);
+
+glBindBuffer(GL_ARRAY_BUFFER, m_models[i]->buffers[3]);
+glGetBufferParameteriv(GL_ARRAY_BUFFER,GL_BUFFER_SIZE,&size);
+glBufferData(GL_ARRAY_BUFFER, size + 4 * sizeof(float), NULL, GL_STATIC_READ);
+
+glBindBuffer(GL_ARRAY_BUFFER, m_models[i]->buffers[4]);
+glGetBufferParameteriv(GL_ARRAY_BUFFER,GL_BUFFER_SIZE,&size);
+glBufferData(GL_ARRAY_BUFFER, size + 4  4  sizeof(float), NULL, GL_DYNAMIC_DRAW);
+
+glBindBuffer(GL_ARRAY_BUFFER,0);
+break;
+}
+}
+
+if(newModelID == -1)
+{
+newModelID = m_models.size();
+printf("Model not found, using LoadModel\n");
+LoadModel(_model);
+}
+
+ModelInstance *mi = new ModelInstance();
+
+mi->world = _world;
+mi->explosion = _explosion;
+mi->worldInverseTranspose = _worldInverseTranspose;
+
+m_models[newModelID]->instances.insert(pair<int, ModelInstance*>(_id, mi));
+}
+
+
+
+
+
+
+struct ModelInstance
+{
+private:
+
+public:
+
+float   *explosion;
+glm::mat4 *world;
+glm::mat4 *worldInverseTranspose;
+};
+
+struct ModelRenderInfo
+{
+public:
+
+int vertices;
+GLuint bufferVAOID;
+GLuint texHandle;
+std::string name;
+std::map<int, ModelInstance*> instances;
+
+GLuint buffers[6];
+
+ModelRenderInfo(){}
+
+};
+*/
+
+/*
+int GLGraphics::RenderStandard()
+{
+	for (int i = 0;i<m_models.size();i++)
+	{
+		glBindVertexArray(m_models[i]->bufferVAOID);
+
+		glDrawArrays(GL_TRIANGLES, 0, m_models[i]->vertices);
+
+		glBindVertexArray(0);
+	}
+}
+*/

@@ -5,28 +5,28 @@ Ks 0.5 0.5 0.5
 Ni 1.0
 newmtl Final_Textures:lambert10SG
 Ka 0.0 0.0 0.0
-Kd 0.0 0.0 0.0
+Kd 0.5 0.5 0.5
 Ks 0.5 0.5 0.5
 Ni 1.0
-map_Kd head_512.tga
+map_Kd head_512.png
 newmtl Final_Textures:lambert6SG
 Ka 0.0 0.0 0.0
-Kd 0.0 0.0 0.0
+Kd 0.5 0.5 0.5
 Ks 0.5 0.5 0.5
 Ni 1.0
-map_Kd head_512.tga
+map_Kd head_512.png
 newmtl Final_Textures:lambert7SG
-Ka 0.0 0.0 0.0
-Kd 0.0 0.0 0.0
+Ka 0.0 0.1 0.0
+Kd 0.5 0.5 0.5
 Ks 0.5 0.5 0.5
 Ni 1.0
-map_Kd body_1024.tga
+map_Kd body_1024.png
 newmtl Final_Textures:lambert11SG
 Ka 0.0 0.0 0.0
-Kd 0.0 0.0 0.0
+Kd 0.5 0.5 0.5
 Ks 0.5 0.5 0.5
 Ni 1.0
-map_Kd body_1024.tga
+map_Kd body_1024.png
 newmtl initialShadingGroup
 Ka 0.0 0.0 0.0
 Kd 0.5 0.5 0.5

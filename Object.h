@@ -1,6 +1,5 @@
 #pragma once
 #include "datatypes.h"
-#include <gl/glew.h>
 #include <vector>
 
 
@@ -9,6 +8,8 @@ class Object {
 	public:
 		std::vector<face> faces;
 		GLuint texture;
+		GLuint VAOid;
+		GLuint BUFFid;
 		material* mat;
 	public:
 		Object();
