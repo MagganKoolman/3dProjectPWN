@@ -3,6 +3,9 @@
 Object::Object() {
 	this->texture = 0;
 }
+Object::~Object() {
+
+}
 void Object::setTexture(GLuint text) {
 	this->texture = text;
 }

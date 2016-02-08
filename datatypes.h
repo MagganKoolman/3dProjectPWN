@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <gl/glew.h>
+#include "glm\glm.hpp"
+
 struct vtx {
 	float x, y, z;
 };
@@ -14,7 +16,7 @@ struct face {
 	int v[3], n[3], t[3];
 };
 struct material {
-	vec3 Ka, Kd, Ks;
+	glm::vec3 Ka, Kd, Ks;
 	std::string materialName;
 	GLuint texid;
 };

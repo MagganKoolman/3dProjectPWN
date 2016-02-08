@@ -40,9 +40,12 @@ GLuint gVertexAttribute = 0;
 GLuint gShaderProgram = 0;
 GLuint texture = 0;
 
+
 mat4 M;
 mat4 Cam;
 mat4 Persp;
+
+material standardMat = {vec3(1,0,0),vec3(0,1,0),vec3(0,0,1), "", 0};
 
 uint nrOfFaces = 0;
 
@@ -56,6 +59,7 @@ int loadshader(char* filename, char** ShaderSource, unsigned long& len);
 // This function RELEASES THE MEMORY ALLOCATED
 void unloadshader(GLubyte** ShaderSource);
 
+int objectOffset = 0;
 
 vector<vtx> vertices;
 vector<nvtx> normalVertices;
@@ -63,6 +67,10 @@ vector<tex> textureCoords;
 //vector<face> faces;
 vector<material> allMaterials;
 vector<Object*> objects;
+
+map<string, GLuint> texmapid;
+
+void CreateTriangleData();
 
 GLuint CreateTexture(string fileName)
 {
@@ -90,58 +98,71 @@ GLuint CreateTexture(string fileName)
 
 void loadMaterials(string materials)
 {
-	map<string, GLuint> texmapid;
 	ifstream matFile(materials);
 	istringstream inputString;
 	string line, special, input, name;
 	material mat;
 	bool first = true;
+	bool newMaterial = true;
 	while (getline(matFile, input))
 	{
 		inputString.clear();
 		inputString.str(input);
 		line = input.substr(0, 2);
+
 		if (line == "ne")
 		{
-			
-			if (!first) {
-				allMaterials.push_back(mat);
+			inputString >> special >> name;
+			newMaterial = true;
+			for (int i = 0; i < allMaterials.size(); i++) {
+				if (name == allMaterials[i].materialName) {
+					newMaterial = false;
+				}
 			}
-			first = false;
+			if (newMaterial) {
+				if (!first) {
+					allMaterials.push_back(mat);
+				}
+				first = false;
 
-			mat.materialName = "";
-			
-			inputString >> special >> name;
-			mat.materialName = name;
-			mat.texid = 0;
-		}
-		else if (line == "Ka")
-		{
-			inputString >> special >> mat.Ka.x >> mat.Ka.y >> mat.Ka.z;
-		}
-		else if (line == "Kd")
-		{
-			inputString >> special >> mat.Kd.x >> mat.Kd.y >> mat.Kd.z;
-		}
-		else if (line == "Ks")
-		{
-			inputString >> special >> mat.Ks.x >> mat.Ks.y >> mat.Ks.z;
-		}
-		else if (line == "ma")
-		{
-			inputString >> special >> name;
-			if (!texmapid[name]) {
-				texmapid[name] = CreateTexture(name);
+				mat.materialName = "";
+
+				mat.materialName = name;
+				mat.texid = 0;
 			}
-			mat.texid = texmapid[name];
+		}
+		if (newMaterial) {
+			if (line == "Ka")
+			{
+				inputString >> special >> mat.Ka.x >> mat.Ka.y >> mat.Ka.z;
+			}
+			else if (line == "Kd")
+			{
+				inputString >> special >> mat.Kd.x >> mat.Kd.y >> mat.Kd.z;
+			}
+			else if (line == "Ks")
+			{
+				inputString >> special >> mat.Ks.x >> mat.Ks.y >> mat.Ks.z;
+			}
+			else if (line == "ma")
+			{
+				inputString >> special >> name;
+				if (!texmapid[name]) {
+					texmapid[name] = CreateTexture(name);
+				}
+				mat.texid = texmapid[name];
+			}
 		}
 	}
-	allMaterials.push_back(mat);
+	
+	if (newMaterial) {
+		allMaterials.push_back(mat);
+	}
 }
 
-void loadObj() {
+void loadObj(string fileName) {
 	string input;
-	ifstream objFile("mesh.obj");
+	ifstream objFile(fileName);
 	istringstream inputString;
 	string line, special, mat;
 	char* specialChar = (char*)malloc(5);
@@ -149,8 +170,8 @@ void loadObj() {
 	nvtx n;
 	tex t;
 	face f;
-	vector<string> materials;
 	Object* o = new Object();
+	o->mat = &standardMat;
 
 	while (getline(objFile, input))
 	{
@@ -177,14 +198,16 @@ void loadObj() {
 		}
 		else if (line == "us"){
 			inputString >> special >> mat;
-			
 			if (!o->isEmpty()) {
 				objects.push_back(o);
 				o = new Object();
+				o->mat = &standardMat;
 			}
 			for (int i = 0; i < allMaterials.size(); i++) {
-				if (mat == allMaterials[i].materialName)
+				if (mat == allMaterials[i].materialName) {
 					o->mat = &allMaterials[i];
+					break;
+				}
 			}
 
 		}
@@ -198,6 +221,7 @@ void loadObj() {
 	}
 	free(specialChar);
 	objFile.close();
+	CreateTriangleData();
 }
 
 void CreateShaders()
@@ -256,15 +280,13 @@ void CreateShaders()
 }
 
 void CreateTriangleData()
-{
-	loadObj();
-	
+{	
 	TriangleVertex *triangleVertices;
 
 	int vIndex;
 	int tIndex;
 	int nIndex;
-	for (uint o = 0; o < objects.size(); o++) {
+	for (uint o = objectOffset; o < objects.size(); o++) {
 		triangleVertices = new TriangleVertex[objects[o]->faces.size()*3];
 		for (uint i = 0; i < objects[o]->faces.size(); i++) {
 			for (int j = 0; j < 3; j++) {
@@ -305,7 +327,10 @@ void CreateTriangleData()
 
 		delete[] triangleVertices;
 	}
-	
+	objectOffset = objects.size();
+	vertices.clear();
+	normalVertices.clear();
+	textureCoords.clear();
 }
 
 void SetViewport()
@@ -325,16 +350,18 @@ void Render()
 	GLuint ambientLight = glGetUniformLocation(gShaderProgram, "ambientLight");
 	GLuint diffuseLight = glGetUniformLocation(gShaderProgram, "diffuseLight");
 	GLuint specularLight = glGetUniformLocation(gShaderProgram, "specularLight");
+	GLuint cameraPos = glGetUniformLocation(gShaderProgram, "cameraPos");
 
 	GLuint camMatrix = glGetUniformLocation(gShaderProgram, "Camera");
 	GLuint perspMatrix = glGetUniformLocation(gShaderProgram, "Perspective");
-	
+
+	glUniform3fv(cameraPos, 1, &pos[0]);
 
 	glUniformMatrix4fv(camMatrix, 1, GL_FALSE, &Cam[0][0]);
 	glUniformMatrix4fv(perspMatrix, 1, GL_FALSE, &Persp[0][0]);
 
-	glClearColor(0.2f, 0.2f, 0.2f, 1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+	glClearColor(0.f, 0.f, 0.f, 1.f);
+	glClear(GL_COLOR_BUFFER_BIT | dGL_DEPTH_BUFFER_BIT);	
 	glUseProgram(gShaderProgram);
 	for (uint i = 0; i < objects.size(); i++)
 	{
@@ -347,13 +374,16 @@ void Render()
 		glUniform3fv(specularLight, 1, &specular[0]);
 
 		glBindVertexArray(objects[i]->VAOid);	
-		GLuint tempTexid = objects[i]->mat->texid;
-		
+		GLuint tempTexid = 5;
+		if (objects[i]->mat->materialName != "") {
+			tempTexid = objects[i]->mat->texid;
+		}
 		if (tempTexid == 0)
 		{
 			tempTexid = 5;
 		}
 		glBindTexture(GL_TEXTURE_2D, tempTexid);
+		
 		glDrawArrays(GL_TRIANGLES, 0, objects[i]->faces.size() * 3);	
 		glBindVertexArray(0);
 	}
@@ -381,12 +411,15 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 		SetViewport(); //4. Sätt viewport
 
 		CreateShaders(); //5. Skapa vertex- och fragment-shaders
-		CreateTriangleData(); //6. Definiera triangelvertiser, 7. Skapa vertex buffer object (VBO), 8.Skapa vertex array object (VAO)
+	
+		loadObj("mesh.obj");
+		loadObj("obj.obj");
+		loadObj("file.obj");
 		
 		ShowWindow(wndHandle, nCmdShow);
 		ShowCursor(false);
 		bool running = true;
-		CreateTexture("body_1024.png");
+
 		chrono::milliseconds ms = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch());
 		long long dt = ms.count();
 		while (WM_QUIT != msg.message && running)

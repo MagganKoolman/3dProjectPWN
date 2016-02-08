@@ -5,7 +5,7 @@ layout(location = 2) in vec3 vertex_normal;
 
 out vec2 texOut;
 out vec3 normal;
-out vec3 light;
+out vec3 position;
 
 uniform mat4 Camera;
 uniform mat4 Perspective;
@@ -13,7 +13,7 @@ uniform mat4 Perspective;
 void main()
 {
 	vec3 temp = vertex_position;
-	light = normalize(vec3(0,0,-10)-temp);
+	position = temp;
 	normal = vertex_normal;
 	texOut = vertex_tex;
 	gl_Position = Perspective * Camera * vec4(temp, 1.0);

@@ -1,9 +1,23 @@
-﻿Build started 2016-02-05 14:56:30.
+﻿Build started 2016-02-08 17:03:58.
      1>Project "J:\vs15\Projects\3dProjectPWN\Demo.vcxproj" on node 2 (Build target(s)).
-     1>Link:
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /I"J:\Visual Studio 2015\Projects\3dProjectPWN\Simple OpenGL Image Library\src" /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+     1>j:\vs15\projects\3dprojectpwn\main.cpp(117): warning C4018: '<': signed/unsigned mismatch
+     1>j:\vs15\projects\3dprojectpwn\main.cpp(206): warning C4018: '<': signed/unsigned mismatch
+     1>j:\vs15\projects\3dprojectpwn\main.cpp(195): warning C4996: 'sscanf': This function or variable may be unsafe. Consider using sscanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+         c:\program files (x86)\windows kits\10\include\10.0.10150.0\ucrt\stdio.h(2254): note: see declaration of 'sscanf'
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"J:\vs15\Projects\3dProjectPWN\Debug\Demo.exe" /INCREMENTAL /NOLOGO SOIL.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"J:\vs15\Projects\3dProjectPWN\Debug\Demo.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"J:\vs15\Projects\3dProjectPWN\Debug\Demo.lib" /MACHINE:X86 Debug\main.obj
+         Debug\Object.obj
+         Debug\Player.obj
+     1>SOIL.lib(image_DXT.obj) : warning LNK4099: PDB 'SOIL.pdb' was not found with 'SOIL.lib(image_DXT.obj)' or at 'J:\vs15\Projects\3dProjectPWN\Debug\SOIL.pdb'; linking object as if no debug info
+     1>SOIL.lib(image_helper.obj) : warning LNK4099: PDB 'SOIL.pdb' was not found with 'SOIL.lib(image_helper.obj)' or at 'J:\vs15\Projects\3dProjectPWN\Debug\SOIL.pdb'; linking object as if no debug info
+     1>SOIL.lib(SOIL.obj) : warning LNK4099: PDB 'SOIL.pdb' was not found with 'SOIL.lib(SOIL.obj)' or at 'J:\vs15\Projects\3dProjectPWN\Debug\SOIL.pdb'; linking object as if no debug info
+     1>SOIL.lib(stb_image_aug.obj) : warning LNK4099: PDB 'SOIL.pdb' was not found with 'SOIL.lib(stb_image_aug.obj)' or at 'J:\vs15\Projects\3dProjectPWN\Debug\SOIL.pdb'; linking object as if no debug info
          Demo.vcxproj -> J:\vs15\Projects\3dProjectPWN\Debug\Demo.exe
      1>Done Building Project "J:\vs15\Projects\3dProjectPWN\Demo.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:00.19
+Time Elapsed 00:00:09.37

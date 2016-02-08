@@ -13,6 +13,7 @@ class Object {
 		material* mat;
 	public:
 		Object();
+		~Object();
 		void setTexture(GLuint text);
 		void addFace(face f);
 		bool isEmpty();
