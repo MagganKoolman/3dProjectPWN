@@ -361,7 +361,7 @@ void Render()
 	glUniformMatrix4fv(perspMatrix, 1, GL_FALSE, &Persp[0][0]);
 
 	glClearColor(0.f, 0.f, 0.f, 1.f);
-	glClear(GL_COLOR_BUFFER_BIT | dGL_DEPTH_BUFFER_BIT);	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	glUseProgram(gShaderProgram);
 	for (uint i = 0; i < objects.size(); i++)
 	{
