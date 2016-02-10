@@ -88,7 +88,6 @@
     <ClCompile Include="Player.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ClassDiagram.cd" />
     <None Include="Fragment.glsl" />
     <None Include="VertexShader.glsl" />
   </ItemGroup>

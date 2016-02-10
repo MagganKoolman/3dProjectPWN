@@ -32,7 +32,6 @@
     <None Include="Fragment.glsl">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bth_image.h">

@@ -47,7 +47,6 @@ mat4 Persp;
 
 material standardMat = {vec3(1,0,0),vec3(0,1,0),vec3(0,0,1), "", 0};
 
-uint nrOfFaces = 0;
 
 Player player;
 
@@ -194,7 +193,6 @@ void loadObj(string fileName) {
 		else if (line == "f ") {
 			sscanf(input.c_str(), "%s %i/%i/%i %i/%i/%i %i/%i/%i", specialChar, &f.v[0], &f.t[0], &f.n[0], &f.v[1], &f.t[1], &f.n[1], &f.v[2], &f.t[2], &f.n[2]);
 			o->addFace(f);
-			nrOfFaces++;
 		}
 		else if (line == "us"){
 			inputString >> special >> mat;
