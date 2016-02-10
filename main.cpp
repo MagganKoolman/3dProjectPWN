@@ -45,7 +45,7 @@ mat4 M;
 mat4 Cam;
 mat4 Persp;
 
-material standardMat = {vec3(1,0,0),vec3(0,1,0),vec3(0,0,1), "", 0};
+material standardMat = {vec3(1,0,0),vec3(0,1,0),vec3(0,0,1), "standardMaterial", 0};
 
 
 Player player;
@@ -64,10 +64,12 @@ vector<vtx> vertices;
 vector<nvtx> normalVertices;
 vector<tex> textureCoords;
 //vector<face> faces;
-vector<material> allMaterials;
+vector<material*> allMaterials;
 vector<Object*> objects;
 
 map<string, GLuint> texmapid;
+
+int offset = 1;
 
 void CreateTriangleData();
 
@@ -100,7 +102,7 @@ void loadMaterials(string materials)
 	ifstream matFile(materials);
 	istringstream inputString;
 	string line, special, input, name;
-	material mat;
+	material* mat = new material();
 	bool first = true;
 	bool newMaterial = true;
 	while (getline(matFile, input))
@@ -114,34 +116,35 @@ void loadMaterials(string materials)
 			inputString >> special >> name;
 			newMaterial = true;
 			for (int i = 0; i < allMaterials.size(); i++) {
-				if (name == allMaterials[i].materialName) {
+				if (name == allMaterials[i]->materialName) {
 					newMaterial = false;
 				}
 			}
 			if (newMaterial) {
 				if (!first) {
 					allMaterials.push_back(mat);
+					mat = new material();
 				}
 				first = false;
 
-				mat.materialName = "";
+				mat->materialName = "";
 
-				mat.materialName = name;
-				mat.texid = 0;
+				mat->materialName = name;
+				mat->texid = 0;
 			}
 		}
 		if (newMaterial) {
 			if (line == "Ka")
 			{
-				inputString >> special >> mat.Ka.x >> mat.Ka.y >> mat.Ka.z;
+				inputString >> special >> mat->Ka.x >> mat->Ka.y >> mat->Ka.z;
 			}
 			else if (line == "Kd")
 			{
-				inputString >> special >> mat.Kd.x >> mat.Kd.y >> mat.Kd.z;
+				inputString >> special >> mat->Kd.x >> mat->Kd.y >> mat->Kd.z;
 			}
 			else if (line == "Ks")
 			{
-				inputString >> special >> mat.Ks.x >> mat.Ks.y >> mat.Ks.z;
+				inputString >> special >> mat->Ks.x >> mat->Ks.y >> mat->Ks.z;
 			}
 			else if (line == "ma")
 			{
@@ -149,7 +152,7 @@ void loadMaterials(string materials)
 				if (!texmapid[name]) {
 					texmapid[name] = CreateTexture(name);
 				}
-				mat.texid = texmapid[name];
+				mat->texid = texmapid[name];
 			}
 		}
 	}
@@ -157,13 +160,16 @@ void loadMaterials(string materials)
 	if (newMaterial) {
 		allMaterials.push_back(mat);
 	}
+	if (mat->materialName == "") {
+		delete mat;
+	}
 }
 
 void loadObj(string fileName) {
 	string input;
 	ifstream objFile(fileName);
 	istringstream inputString;
-	string line, special, mat;
+	string line, special, material;
 	char* specialChar = (char*)malloc(5);
 	vtx v;
 	nvtx n;
@@ -195,23 +201,26 @@ void loadObj(string fileName) {
 			o->addFace(f);
 		}
 		else if (line == "us"){
-			inputString >> special >> mat;
+			inputString >> special >> material;
+			o->setModelTranslation(vec3(offset*2,0,0));
+			o->setModelScale(vec3(offset,offset,offset));
+			offset+=5;
 			if (!o->isEmpty()) {
 				objects.push_back(o);
 				o = new Object();
 				o->mat = &standardMat;
 			}
 			for (int i = 0; i < allMaterials.size(); i++) {
-				if (mat == allMaterials[i].materialName) {
-					o->mat = &allMaterials[i];
+				if (material == allMaterials[i]->materialName) {
+					o->mat = allMaterials[i];
 					break;
 				}
 			}
 
 		}
 		else if (line == "mt") {
-			inputString >> special >> mat;
-			loadMaterials(mat);
+			inputString >> special >> material;
+			loadMaterials(material);
 		}	
 	}
 	if (!o->isEmpty()) {
@@ -344,11 +353,14 @@ void Render()
 	vec3 ambient;
 	vec3 diffuse;
 	vec3 specular;
+	mat4x4 model;
 
 	GLuint ambientLight = glGetUniformLocation(gShaderProgram, "ambientLight");
 	GLuint diffuseLight = glGetUniformLocation(gShaderProgram, "diffuseLight");
 	GLuint specularLight = glGetUniformLocation(gShaderProgram, "specularLight");
 	GLuint cameraPos = glGetUniformLocation(gShaderProgram, "cameraPos");
+
+	GLuint modelMatrix = glGetUniformLocation(gShaderProgram, "Model");
 
 	GLuint camMatrix = glGetUniformLocation(gShaderProgram, "Camera");
 	GLuint perspMatrix = glGetUniformLocation(gShaderProgram, "Perspective");
@@ -366,14 +378,17 @@ void Render()
 		ambient = objects[i]->mat->Ka;
 		diffuse = objects[i]->mat->Kd;
 		specular = objects[i]->mat->Ks;
+		
+		model = objects[i]->getModelMatrix();
 
+		glUniformMatrix4fv(modelMatrix,1,GL_FALSE, &model[0][0]);
 		glUniform3fv(ambientLight, 1, &ambient[0]);
 		glUniform3fv(diffuseLight, 1, &diffuse[0]);
 		glUniform3fv(specularLight, 1, &specular[0]);
 
 		glBindVertexArray(objects[i]->VAOid);	
 		GLuint tempTexid = 5;
-		if (objects[i]->mat->materialName != "") {
+		if (objects[i]->mat->materialName != "standardMaterial") {
 			tempTexid = objects[i]->mat->texid;
 		}
 		if (tempTexid == 0)
@@ -409,10 +424,13 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 		SetViewport(); //4. Sätt viewport
 
 		CreateShaders(); //5. Skapa vertex- och fragment-shaders
-	
-		loadObj("mesh.obj");
-		loadObj("obj.obj");
-		loadObj("file.obj");
+
+		///loadObj("obj.obj");
+		loadObj("sphere1.obj");
+		loadObj("quadBrick_Y_up.obj");
+		//loadObj("file.obj");
+		loadObj("box.obj");
+		//loadObj("mesh.obj");
 		
 		ShowWindow(wndHandle, nCmdShow);
 		ShowCursor(false);
@@ -440,6 +458,9 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 		}
 		for (uint i = 0; i < objects.size(); i++) {
 			delete objects[i];
+		}
+		for (uint i = 0; i < allMaterials.size(); i++) {
+			delete allMaterials[i];
 		}
 		wglMakeCurrent(NULL, NULL);
 		ReleaseDC(wndHandle, hDC);

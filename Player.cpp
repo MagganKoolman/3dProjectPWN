@@ -1,7 +1,7 @@
 #include "Player.h"
 #include <Windows.h>
 Player::Player() {
-	this->position = { 0,3,0 };
+	this->position = { 0,1,0 };
 	this->lookat = {0,0,1};
 	this->angleHor = 0.01f;
 	this->angleVer = 0.01f;

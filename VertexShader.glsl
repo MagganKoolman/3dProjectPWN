@@ -7,6 +7,7 @@ out vec2 texOut;
 out vec3 normal;
 out vec3 position;
 
+uniform mat4 Model;
 uniform mat4 Camera;
 uniform mat4 Perspective;
 
@@ -16,6 +17,6 @@ void main()
 	position = temp;
 	normal = vertex_normal;
 	texOut = vertex_tex;
-	gl_Position = Perspective * Camera * vec4(temp, 1.0);
+	gl_Position = Perspective * Camera * Model * vec4(temp, 1.0);
 }
 
